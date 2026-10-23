@@ -85,3 +85,5 @@ StripeBilling
 
 All constructs
 - Removed the `Owner: johnathan-horner` tag that was added to every user's resources.
+- **breaking**: compliance modes are now `HIPAA`, `FERPA` and `SR26-2` (the Federal Reserve model risk
+  guidance formerly called SR 11-7). Other modes were removed.

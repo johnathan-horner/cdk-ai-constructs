@@ -8,7 +8,8 @@ import { Construct } from 'constructs';
 /**
  * Compliance modes supported by AuditableStorage
  */
-export type ComplianceMode = 'HIPAA' | 'FERPA' | 'FEDRAMP' | 'SR11-7';
+/** SR26-2 is the Federal Reserve model risk guidance formerly known as SR 11-7. */
+export type ComplianceMode = 'HIPAA' | 'FERPA' | 'SR26-2';
 
 /**
  * Properties for AuditableStorage construct
@@ -38,7 +39,7 @@ export interface AuditableStorageProps {
   readonly allowedPrincipals?: iam.IPrincipal[];
 
   /**
-   * Retention preset. When set, it replaces retentionDays: HIPAA, FEDRAMP and SR11-7 keep
+   * Retention preset. When set, it replaces retentionDays: HIPAA and SR26-2 keep
    * objects 2555 days (7 years), FERPA 1825 days (5 years). It changes nothing else.
    * @default undefined - retentionDays is used
    */
@@ -59,7 +60,7 @@ export interface AuditableStorageProps {
  * - S3 versioning for data protection
  * - Intelligent lifecycle management (IA at 30 days, Glacier at 90 days)
  * - CloudTrail audit logging scoped to this bucket
- * - Retention presets named after common regimes (HIPAA, FERPA, FedRAMP, SR 11-7). These set
+ * - Retention presets named after common regimes (HIPAA, FERPA, SR 26-2). These set
  *   retention days only; they do not make a workload compliant on their own
  * - Bucket policies enforcing SSL and encryption requirements
  *
@@ -238,13 +239,11 @@ export class AuditableStorage extends Construct {
 
     switch (complianceMode) {
       case 'HIPAA':
-        return 2555; // 7 years
+        return 2555; // 7 years (preset, not a legal requirement)
       case 'FERPA':
-        return 1825; // 5 years
-      case 'FEDRAMP':
+        return 1825; // 5 years (preset, not a legal requirement)
+      case 'SR26-2':
         return 2555; // 7 years
-      case 'SR11-7':
-        return 2555; // 7 years (Federal banking regulation)
       default:
         return defaultRetention || 90;
     }

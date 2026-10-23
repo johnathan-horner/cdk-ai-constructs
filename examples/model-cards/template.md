@@ -168,7 +168,7 @@ List steps taken to address identified biases.
 ### Regulatory Requirements
 Specify applicable compliance frameworks.
 
-**Compliance Mode:** *[HIPAA | FERPA | FEDRAMP | SR11-7 | None]*
+**Compliance Mode:** *[HIPAA | FERPA | SR26-2 | None]*
 
 **Justification:** *Example: FERPA compliance required as model will process student feedback data.*
 

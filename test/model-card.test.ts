@@ -152,9 +152,9 @@ describe('ModelCardConstruct', () => {
   });
 
   test('applies compliance mode tag when specified', () => {
-    new ModelCardConstruct(stack, 'TestModelCard', { ...baseProps, complianceMode: 'SR11-7' });
+    new ModelCardConstruct(stack, 'TestModelCard', { ...baseProps, complianceMode: 'SR26-2' });
     expect(card(Template.fromStack(stack)).Tags).toEqual(
-      expect.arrayContaining([{ Key: 'ComplianceMode', Value: 'SR11-7' }]),
+      expect.arrayContaining([{ Key: 'ComplianceMode', Value: 'SR26-2' }]),
     );
   });
 

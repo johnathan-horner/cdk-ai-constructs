@@ -10,7 +10,8 @@ import { Construct } from 'constructs';
 /**
  * Compliance modes supported by ModelCard
  */
-export type ModelCardComplianceMode = 'HIPAA' | 'FERPA' | 'FEDRAMP' | 'SR11-7';
+/** SR26-2 is the Federal Reserve model risk guidance formerly known as SR 11-7. */
+export type ModelCardComplianceMode = 'HIPAA' | 'FERPA' | 'SR26-2';
 
 /**
  * Evaluation metric for model performance
@@ -124,7 +125,7 @@ export interface ModelCardConstructProps {
  * - The same content written to S3 as JSON
  * - A DynamoDB model registry entry (written at deploy time by an AwsCustomResource)
  * - A CloudTrail trail recording reads and writes of the model card objects in S3
- * - Optional compliance tag (HIPAA, FERPA, FEDRAMP, SR11-7); it labels the card, nothing more
+ * - Optional compliance tag (HIPAA, FERPA, SR26-2); it labels the card, nothing more
  *
  * @example
  * ```typescript
