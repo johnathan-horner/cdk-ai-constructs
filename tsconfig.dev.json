@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "types": ["jest", "node"],
+    "paths": { "@johnathan-horner/cdk-ai-constructs": ["./src"] },
+    "baseUrl": "."
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts", "examples/**/*.ts"],
+  "exclude": ["node_modules", "lib"]
+}

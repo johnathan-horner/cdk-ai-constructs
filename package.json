@@ -1,0 +1,66 @@
+{
+  "name": "@johnathan-horner/cdk-ai-constructs",
+  "version": "2.0.0",
+  "description": "AWS CDK constructs for AI workloads: Bedrock access, SageMaker serverless endpoints, Cognito multi-tenant auth, auditable S3 storage, event pipelines, model cards, Streamlit on Fargate, and Stripe billing",
+  "keywords": [
+    "aws",
+    "cdk",
+    "bedrock",
+    "sagemaker",
+    "ai",
+    "constructs",
+    "multi-tenant"
+  ],
+  "author": "Johnathan Horner",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/johnathan-horner/cdk-ai-constructs.git"
+  },
+  "homepage": "https://github.com/johnathan-horner/cdk-ai-constructs#readme",
+  "bugs": {
+    "url": "https://github.com/johnathan-horner/cdk-ai-constructs/issues"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\" \"examples/**/*.ts\"",
+    "clean": "rimraf lib",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run clean && npm run build && npm run typecheck && npm test && npm run verify-package",
+    "typecheck": "tsc -p tsconfig.dev.json",
+    "verify-package": "bash scripts/verify-package.sh"
+  },
+  "peerDependencies": {
+    "aws-cdk-lib": "^2.0.0",
+    "constructs": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^18.0.0",
+    "@typescript-eslint/eslint-plugin": "^5.0.0",
+    "@typescript-eslint/parser": "^5.0.0",
+    "aws-cdk-lib": "^2.0.0",
+    "constructs": "^10.0.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.5.0",
+    "rimraf": "^5.0.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
