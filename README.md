@@ -26,7 +26,7 @@ A TypeScript AWS CDK library with **9 constructs** for the infrastructure around
 
 No project currently imports this library. It is used only by its own examples and tests.
 
-## Why I built this
+## Case study
 
 **The problem.** Teams putting AI features on AWS rebuild the same wiring for every app: model
 access, tenant isolation, audit storage, model documentation. The details are easy to get wrong in
