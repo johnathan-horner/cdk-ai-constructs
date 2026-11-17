@@ -2,9 +2,10 @@
 
 ![CI](https://github.com/johnathan-horner/cdk-ai-constructs/actions/workflows/ci.yml/badge.svg)
 
-**Status: In progress.** Version 2.0.0 builds and passes 155 tests, and every construct synthesizes
-to a CloudFormation template. None of the constructs has been deployed to a live AWS account yet,
-and 2.0.0 is not on npm. The published 1.0.0 cannot be imported (see [CHANGELOG.md](CHANGELOG.md)).
+**Status: On npm as 1.0.0, which cannot be imported; 2.0.0 is ready and not yet published.**
+Version 2.0.0 builds and passes 155 tests, and every construct synthesizes to a CloudFormation
+template. None of the constructs has been deployed to a live AWS account yet. npm:
+https://www.npmjs.com/package/@johnathan-horner/cdk-ai-constructs (see [CHANGELOG.md](CHANGELOG.md)).
 
 Independent reference project by Shoot It Analytics LLC. Built with public or synthetic data.
 
@@ -28,39 +29,63 @@ No project currently imports this library. It is used only by its own examples a
 
 ## Case study
 
-**The problem.** Teams putting AI features on AWS rebuild the same wiring for every app: model
-access, tenant isolation, audit storage, model documentation. The details are easy to get wrong in
-ways that only show up later: an IAM policy that grants every model, a tenant ID a user can edit,
-a log bucket rule that S3 rejects on deploy.
+Built by Johnathan Horner, Shoot It Analytics LLC. The same case study is on the [portfolio](https://portfolio.johnathancloudspace.com/#cdk-ai-constructs).
 
-**What I set out to prove.** Whether a small set of CDK constructs can carry those guardrails, so a
-new AI app starts with least-privilege access, tenant isolation and audit storage by default, and
-whether each guardrail can be checked by an automated test before anything is deployed.
+### The problem
 
-**Key design decisions**
-- Scope permissions to exactly what was asked for: one Bedrock model or inference profile, one S3
-  object, one SageMaker endpoint. No `anthropic.*` or account-wide wildcards in defaults.
-- Tenant identity comes from the signed token, never from the request body, and users cannot edit
-  their own tenant attributes.
-- Fail at synth time rather than deploy time: invalid retention values, a route that needs auth with
-  no authorizer, and bad SageMaker sizes throw while the template is built.
-- Secrets stay in SSM Parameter Store; templates hold only parameter names.
-- Every README example below is a function in `examples/per-construct.ts` that the test suite
-  synthesizes, so the documentation cannot drift from the code.
+Teams putting AI on AWS rebuild the same wiring for every project: model access, tenant isolation, audit storage, model documentation. The details are easy to get wrong, like a Bedrock policy with a wildcard or a tenant ID read from the request body.
 
-**Results (measured in this repo).** See [Measured results](#measured-results).
+### Why I built it
 
-**Limits.** Synthesis and unit tests only. No construct has been deployed to a live account, so
-anything only AWS checks at deploy time (some SageMaker model card content rules, service quotas)
-is untested. Compliance presets set retention periods only; they do not make a workload compliant
-with any regulation. This is not a certified or regulated product and has not been used with real
-customers or clients.
+I wanted a small set of constructs that carry those guardrails by default, each checked by an automated test before anything is deployed.
 
-**What I'd do next in a real deployment.** Deploy each example to a sandbox account in CI and tear
-it down, add cdk-nag checks, publish 2.0.0 with provenance, and add a jsii build so Python CDK
-projects can use it.
+### Key decisions
+
+1. **Grant on the caller's role instead of creating new roles.** Version 1.0.0 created a role nothing used. Each construct now takes your Lambda function and grants on its role, so the permission reaches the code that calls Bedrock. The construct needs a function passed in.
+2. **Scope every permission to exactly one model, endpoint or object.** No anthropic.* wildcard, and the model data URL must be a literal s3:// path. Switching models means a redeploy.
+3. **Fail at synth time on invalid input.** Bad props stop the synth with a clear error, so mistakes show up in tests instead of in a half-deployed stack. The props are stricter as a result.
+4. **Inline Python handlers, tested with fakes.** No build step or asset bundling. Handlers must stay under 4,096 characters (a test enforces it), and the Stripe SDK comes from a layer you supply.
+
+### Architecture
+
+The diagram and the flow are in [Architecture](#architecture) below.
+
+### Governance and safety
+
+- Least privilege by default: Bedrock access scoped to one model or inference profile, InvokeEndpoint to one endpoint.
+- Tenant isolation: the tenant ID comes only from the signed token, the app client can't write tenant, tier or plan attributes, and sign-up never overwrites an existing tenant.
+- Stripe webhooks are signature-checked and checkout accepts only allow-listed price IDs.
+- CloudTrail data-event trails with log file validation; SSE-KMS with key rotation and TLS-only bucket policies.
+- The HIPAA, FERPA and SR 26-2 modes set retention periods and tags only; they do not make a stack compliant.
+- CI scans the full git history for secrets.
+
+### Results
+
+- 147 Jest tests in 11 suites and 8 Python tests of the generated handlers pass (run on 2026-11-16).
+- All 9 constructs synthesize, and the packed 2.0.0 imports from a clean project with all 9 exported.
+- Typecheck and lint pass in CI.
+
+### Limits
+
+Tested by synthesis only and never deployed to a live account; no project imports it yet; npm still serves 1.0.0, which can't be imported.
+
+### What I'd do in a real deployment
+
+Publish 2.0.0, deploy each construct to a sandbox account with integration tests, add jsii builds for Python users, and adopt it in one of the other projects.
+
+### Links
+
+- npm package (1.0.0): https://www.npmjs.com/package/@johnathan-horner/cdk-ai-constructs
+- GitHub: https://github.com/johnathan-horner/cdk-ai-constructs
+- Diagram: [docs/architecture/architecture.png](docs/architecture/architecture.png)
 
 ## Architecture
+
+![cdk-ai-constructs: Constructs as synthesized (not deployed)](docs/architecture/architecture.png)
+
+A stack built from the library puts API Gateway, a load balancer and Cognito at the edge, with the Stripe billing functions, Streamlit on Fargate and a sign-up trigger behind them. Your own Lambda functions get scoped grants to Bedrock, a SageMaker serverless endpoint, the model registry and a KMS-encrypted bucket, while CloudTrail records object-level events and CloudWatch alarms watch for errors. Nothing here is deployed; the diagram is what the constructs synthesize.
+
+The diagrams are built with the Python `diagrams` library from [`docs/architecture/`](docs/architecture/). Each arrow is checked against the code and, for AWS calls, the AWS documentation; see [`docs/architecture/arrow-verification.md`](docs/architecture/arrow-verification.md). A 1200x1500 copy of each diagram (`*-linkedin.png`) is in the same folder.
 
 ```
 src/
@@ -255,7 +280,7 @@ new StripeBilling(scope, 'Billing', {
 
 ## Measured results
 
-Measured on branch `rebuild/portfolio-oct` with `npm test`, `pytest test/python` and
+Measured on `main` (re-run on 2026-11-16) with `npm test`, `pytest test/python` and
 `scripts/verify-package.sh`, locally and in GitHub Actions:
 
 | Check | Result |
