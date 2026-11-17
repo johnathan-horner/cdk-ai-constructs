@@ -1,51 +1,30 @@
-# cdk-ai-constructs arrow verification
+# Arrow check
 
-Diagram: `docs/architecture/architecture.py` (subtitle "Library constructs (synthesized in tests, not deployed)").
-It shows what the 9 constructs create and how the resources would talk once a stack using them is deployed.
-Code paths are `src/constructs/*.ts` on `origin/main` (b909abc). "Your Lambda functions" are functions the
-caller passes in as props; the constructs add permissions, integrations or targets to them.
-Docs: (W) = opened with WebFetch; others were fetched as page text by a helper agent in this session and searched
-for the quoted phrase. All loaded with HTTP 200.
+Every arrow that touches an AWS service, with the official AWS page that confirms it and its direction. Arrows between non-AWS parts (Streamlit, Gemini, SQLite, scikit-learn and so on) were checked against the code only. Links come from docs.aws.amazon.com only.
 
-| From | To | Action | Code evidence | AWS doc |
-|---|---|---|---|---|
-| App users | REST API [APIGatewayLambda] | HTTPS request with a Cognito token on protected routes | api-gateway-lambda.ts:219 (RestApi), 265-268 (CognitoUserPoolsAuthorizer), 370-377 (requiresAuth) | https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-integrate-with-cognito.html: create "an authorizer of the COGNITO_USER_POOLS type"; client calls the API with the token |
-| App users | User pool [MultiTenantAuth] | Sign up / sign in (user pool, app client, optional hosted UI domain) | multi-tenant-auth.ts:267, 323, 353 | https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-lambda-post-confirmation.html: "after a signed-up user confirms their user account" (confirms the sign-up flow the trigger hangs off) |
-| App users | Billing API [StripeBilling] | POST /billing/checkout and /billing/portal with a Cognito token | stripe-billing.ts:346-363 | https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html: "The Lambda proxy integration allows the client to call a single Lambda function in the backend" |
-| App users | Load balancer [StreamlitDashboard] | HTTP, or HTTPS with HTTP->HTTPS redirect when a domain is given | streamlit-dashboard.ts:276, 329-370 | UNVERIFIED (partial: the ECS load balancer page does not name Fargate). https://docs.aws.amazon.com/AmazonECS/latest/developerguide/alb.html: "Use an Application Load Balancer for Amazon ECS" (partial: page does not say Fargate explicitly) |
-| Stripe API | Billing API [StripeBilling] | POST /billing/webhook (no authorizer; Stripe signature checked in code) | stripe-billing.ts:362, 279-282 | Same Lambda proxy page (API Gateway side). Stripe side: N/A (not AWS) |
-| REST API | User pool | Cognito user pool authorizer validates the token | api-gateway-lambda.ts:265-268 | https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-integrate-with-cognito.html |
-| REST API | Your Lambda functions | Lambda proxy integration per route | api-gateway-lambda.ts:365-368 | https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html |
-| Billing API | checkout/webhook/portal functions | Lambda proxy integration | stripe-billing.ts:361-363 | Same Lambda proxy page |
-| User pool | post-confirmation trigger | Cognito invokes the PostConfirmation trigger | multi-tenant-auth.ts:307-308 | https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-lambda-post-confirmation.html: "Amazon Cognito invokes this trigger after a signed-up user confirms their user account" |
-| Load balancer | Streamlit on Fargate | Forwards to the container port (default 8501) via a target group | streamlit-dashboard.ts:191, 270, 283-302 | UNVERIFIED (partial: the ECS load balancer page does not name Fargate). https://docs.aws.amazon.com/AmazonECS/latest/developerguide/alb.html: ALB "can route requests to one or more ports on each container instance" (partial) |
-| checkout/webhook/portal functions | Stripe API | stripe.Customer.create, checkout.Session.create, Subscription.retrieve, billing_portal.Session.create | stripe-billing.ts:246-251, 279, 288, 329 | N/A (not AWS) |
-| checkout/webhook/portal functions | SSM Parameter Store | GetParameter WithDecryption for the Stripe secret and webhook secret (parameters are the user's, referenced by name) | stripe-billing.ts:202-207, 339-342, 417-418 | UNVERIFIED (partial: WithDecryption detail). https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_GetParameter.html: "Get information about a single parameter by specifying the parameter name"; `WithDecryption` in request syntax (partial) |
-| checkout/webhook/portal functions | Tenants table | GetItem/UpdateItem tier and stripe_customer_id; Query on `stripe-customer-index` | stripe-billing.ts:240-248, 292-295, 302-307, 326, 336-338 | https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_UpdateItem.html (W): "Edits an existing item's attributes, or adds a new item" |
-| webhook function | Your Lambda functions | lambda.invoke onPaymentSuccess with InvocationType 'Event' | stripe-billing.ts:296-297, 343 | https://docs.aws.amazon.com/lambda/latest/api/API_Invoke.html (W): "To invoke a function asynchronously, set InvocationType to Event" |
-| post-confirmation trigger | Tenants table | PutItem new tenant with `attribute_not_exists(tenant_id)` | multi-tenant-auth.ts:219, 241 | https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_PutItem.html (W): "Creates a new item, or replaces an old item" |
-| Streamlit on Fargate | Tenants table | Optional `grantDynamoDBAccess` on the task role (GetItem, Query by default in the README example) | streamlit-dashboard.ts:480-496 | https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_GetItem.html (W) |
-| Your Lambda functions | Amazon Bedrock | bedrock:InvokeModel / InvokeModelWithResponseStream on one model, or one inference profile plus its foundation model in any region | bedrock-agent.ts:106-108, 129-136, 251-261 | https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_InvokeModel.html (W); https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-support.html: profiles are "tied to a geography (such as US, EU, or APAC)", `us.` routes to US Regions |
-| Your Lambda functions | Serverless endpoint [ServerlessMLEndpoint] | sagemaker:InvokeEndpoint on one endpoint ARN | serverless-ml-endpoint.ts:250-266 (serverlessConfig), 277-285, 373-380 | https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_runtime_InvokeEndpoint.html: "client applications use this API to get inferences from the model hosted at the specified endpoint"; serverless sizes per https://docs.aws.amazon.com/sagemaker/latest/dg/serverless-endpoints.html |
-| Your Lambda functions | SageMaker model card [ModelCardConstruct] | Optional `grantUpdateStatus`: sagemaker:UpdateModelCard, DescribeModelCard | model-card.ts:282 (CfnModelCard), 480-485 | https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_UpdateModelCard.html (W): "Update an Amazon SageMaker Model Card"; resource: https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-sagemaker-modelcard.html |
-| EventBridge rule [EventDrivenPipeline] | Your Lambda functions | Rule target with retryAttempts (default 3) and maxEventAge 2 h | event-driven-pipeline.ts:143, 160-175 (172-173) | https://docs.aws.amazon.com/eventbridge/latest/APIReference/API_PutTargets.html (W): "Adds the specified targets to the specified rule" |
-| EventBridge rule | Dead letter queue | Events EventBridge could not deliver go to the SQS DLQ (SSE-SQS) | event-driven-pipeline.ts:150-158, 169-175 | https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-rule-dlq.html: "EventBridge sends the events with failed invocations to the Amazon SQS queue selected" |
-| Your Lambda functions | KMS-encrypted bucket [AuditableStorage] | grantRead / grantWrite / grantReadWrite (S3 + matching KMS decrypt/encrypt) | auditable-storage.ts:110-145, 256-277 | https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingKMSEncryption.html: "server-side encryption with AWS Key Management Service (AWS KMS) keys (SSE-KMS)" |
-| Your Lambda functions | Model registry [ModelCardConstruct] | grantRegistryRead (DynamoDB read) | model-card.ts:236-250, 472-474 | https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_GetItem.html (W) |
-| KMS-encrypted bucket | CloudTrail trails | Trail logs S3 object-level data events for the bucket | auditable-storage.ts:181-194 | https://docs.aws.amazon.com/awscloudtrail/latest/userguide/logging-data-events-with-cloudtrail.html: "Amazon S3 object-level API activity (for example, GetObject, DeleteObject, and PutObject" |
-| Model card JSON | CloudTrail trails | Second trail logs data events under `model-cards/` | model-card.ts:393-405 | Same CloudTrail data events page |
-| Your Lambda functions | CloudWatch alarms | Lambda Errors (and Duration in EventDrivenPipeline) metrics feed alarms; optional SNS action | bedrock-agent.ts:144-160; event-driven-pipeline.ts:179-208, 265-296 | https://docs.aws.amazon.com/lambda/latest/dg/monitoring-metrics.html: "Lambda automatically sends metrics about the invocation to Amazon CloudWatch"; https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Alarms.html: "sending a notification to an Amazon SNS topic" |
+## architecture.png (9 constructs)
 
-Wiring left out of the picture for readability (real in code):
-- post-confirmation trigger -> Cognito AdminUpdateUserAttributes to write `custom:tenant_id` (multi-tenant-auth.ts:226-231, 246-251); doc https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_AdminUpdateUserAttributes.html "Updates the specified user's attributes."
-- Model card JSON and registry entry are written at deploy time by `AwsCustomResource` (S3 putObject, DynamoDB updateItem) (model-card.ts:328-391); doc https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.custom_resources.AwsCustomResource.html "materialized using specific AWS API calls".
-- SageMaker model (CfnModel) reads `modelDataUrl` from S3 with its execution role (serverless-ml-endpoint.ts:175-248); doc https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_ContainerDefinition.html (ModelDataUrl).
-- Fargate task pulls its image built from `dockerfilePath` via a CDK asset in ECR (streamlit-dashboard.ts:254); doc https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html.
-- Optional DLQ processor Lambda polls the DLQ (event-driven-pipeline.ts:330-341); doc https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html.
-- APIGatewayLambda and StreamlitDashboard alarms (api-gateway-lambda.ts:406-445; streamlit-dashboard.ts:422-475), ServerlessMLEndpoint alarms (serverless-ml-endpoint.ts:292-336).
+| From | To | Action | AWS doc |
+|---|---|---|---|
+| Cognito user pool | Post-confirmation trigger | Cognito invokes the trigger after a user is confirmed | https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-lambda-post-confirmation.html |
+| Post-confirmation trigger | Tenants table | PutItem new tenant | https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_PutItem.html |
+| REST API | Handler | Lambda proxy integration | https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html |
+| REST API | CloudWatch alarms | 4XX, 5XX and latency metrics feed alarms | https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Alarms.html |
+| Agent Lambda | Amazon Bedrock | InvokeModel | https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_InvokeModel.html |
+| EventBridge rule | Processor | Rule target | https://docs.aws.amazon.com/eventbridge/latest/APIReference/API_PutTargets.html |
+| EventBridge rule | Dead-letter queue | Events that fail delivery go to the SQS DLQ | https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-rule-dlq.html |
+| Dead-letter queue | Alarm topic | CloudWatch alarm on queue depth notifies SNS | https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Alarms.html |
+| KMS key | S3 bucket | SSE-KMS encryption | https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingKMSEncryption.html |
+| S3 bucket | CloudTrail | Trail logs the bucket's object-level data events | https://docs.aws.amazon.com/awscloudtrail/latest/userguide/logging-data-events-with-cloudtrail.html |
+| Deploy-time writer | Card JSON / Model registry | AwsCustomResource makes the PutObject and UpdateItem calls at deploy time | https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.custom_resources.AwsCustomResource.html |
+| Invoke function | SageMaker serverless endpoint | InvokeEndpoint | https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_runtime_InvokeEndpoint.html |
+| Route 53 record | Application Load Balancer | Alias record to the load balancer | UNVERIFIED (doc page not opened in this pass) |
+| Application Load Balancer | Fargate service | Forwards to the container through a target group | UNVERIFIED (partial: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/alb.html does not name Fargate) |
+| Billing API | 3 Lambdas | Lambda proxy integration | https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html |
+| SSM SecureString | 3 Lambdas | GetParameter with decryption at runtime | UNVERIFIED (partial: https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_GetParameter.html, WithDecryption detail) |
 
-UNVERIFIED: none. Partial confirmations: the ALB arrows (the ECS ALB page does not name Fargate) and the
-SSM `WithDecryption` detail (parameter present in request syntax; SecureString sentence not quoted).
-Note for the README/CHANGELOG: the EventBridge DLQ page does not say the AWS managed SQS key is unsupported.
-The closest official support is https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-key-management.html
-("you must create a customer managed KMS key" for event sources such as EventBridge).
+## UNVERIFIED
+
+- Route 53 record > Application Load Balancer: UNVERIFIED (doc page not opened in this pass)
+- Application Load Balancer > Fargate service: UNVERIFIED (partial: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/alb.html does not name Fargate)
+- SSM SecureString > 3 Lambdas: UNVERIFIED (partial: https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_GetParameter.html, WithDecryption detail)
