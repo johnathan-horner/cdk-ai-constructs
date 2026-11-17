@@ -2,9 +2,9 @@
 
 ![CI](https://github.com/johnathan-horner/cdk-ai-constructs/actions/workflows/ci.yml/badge.svg)
 
-**Status: On npm as 1.0.0, which cannot be imported; 2.0.0 is ready and not yet published.**
-Version 2.0.0 builds and passes 155 tests, and every construct synthesizes to a CloudFormation
-template. None of the constructs has been deployed to a live AWS account yet. npm:
+**Status: Live on npm.** Version 2.0.0 is published, builds and passes 155 tests, and every construct
+synthesizes to a CloudFormation template. None of the constructs has been deployed to a live AWS
+account yet. npm:
 https://www.npmjs.com/package/@johnathan-horner/cdk-ai-constructs (see [CHANGELOG.md](CHANGELOG.md)).
 
 Independent reference project by Shoot It Analytics LLC. Built with public or synthetic data.
@@ -62,20 +62,20 @@ The diagram and the flow are in [Architecture](#architecture) below.
 ### Results
 
 - 147 Jest tests in 11 suites and 8 Python tests of the generated handlers pass (run on 2026-11-16).
-- All 9 constructs synthesize, and the packed 2.0.0 imports from a clean project with all 9 exported.
+- All 9 constructs synthesize, and the packed 2.0.0 imports from a clean project with all 9 exported. 2.0.0 is published on npm.
 - Typecheck and lint pass in CI.
 
 ### Limits
 
-Tested by synthesis only and never deployed to a live account; no project imports it yet; npm still serves 1.0.0, which can't be imported.
+Tested by synthesis only and never deployed to a live account, and no project imports it yet.
 
 ### What I'd do in a real deployment
 
-Publish 2.0.0, deploy each construct to a sandbox account with integration tests, add jsii builds for Python users, and adopt it in one of the other projects.
+Deploy each construct to a sandbox account with integration tests, add jsii builds for Python users, and adopt it in one of the other projects.
 
 ### Links
 
-- npm package (1.0.0): https://www.npmjs.com/package/@johnathan-horner/cdk-ai-constructs
+- npm package: https://www.npmjs.com/package/@johnathan-horner/cdk-ai-constructs
 - GitHub: https://github.com/johnathan-horner/cdk-ai-constructs
 - Diagram: [docs/architecture/architecture.png](docs/architecture/architecture.png)
 
@@ -127,7 +127,7 @@ DUMP_INLINE_DIR=/tmp/inline npx jest test/synth-smoke.test.ts
 INLINE_DIR=/tmp/inline pytest test/python
 ```
 
-To use it in a CDK app once 2.0.0 is published: `npm install @johnathan-horner/cdk-ai-constructs`.
+To use it in a CDK app: `npm install @johnathan-horner/cdk-ai-constructs` (2.0.0 or later; 1.0.0 cannot be imported).
 
 ## Examples
 
@@ -311,7 +311,6 @@ Measured on `main` (re-run on 2026-11-16) with `npm test`, `pytest test/python` 
 
 - Deploy every example in a sandbox account from CI, then destroy it.
 - cdk-nag rules in the test suite.
-- Publish 2.0.0 and deprecate 1.0.0 on npm.
 - jsii build for Python.
 
 ## License
