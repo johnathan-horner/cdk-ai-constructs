@@ -102,31 +102,7 @@ Built by Johnathan Horner, Shoot It Analytics LLC
 
 ## Architecture
 
-![cdk-ai-constructs: Constructs as synthesized (not deployed)](docs/architecture/architecture.png)
-
-A stack built from the library puts API Gateway, a load balancer and Cognito at the edge, with the Stripe billing functions, Streamlit on Fargate and a sign-up trigger behind them. Your own Lambda functions get scoped grants to Bedrock, a SageMaker serverless endpoint, the model registry and a KMS-encrypted bucket, while CloudTrail records object-level events and CloudWatch alarms watch for errors. Nothing here is deployed; the diagram is what the constructs synthesize.
-
-The diagrams are built with the Python `diagrams` library from [`docs/architecture/`](docs/architecture/). Each arrow is checked against the code and, for AWS calls, the AWS documentation; see [`docs/architecture/arrow-verification.md`](docs/architecture/arrow-verification.md). A 1200x1500 copy of each diagram (`*-linkedin.png`) is in the same folder.
-
-```
-src/
-  index.ts                 exports all 9 constructs
-  constructs/*.ts          one file per construct
-test/
-  *.test.ts                Jest + aws-cdk-lib/assertions against synthesized templates
-  synth-smoke.test.ts      every construct synthesizes; inline Lambda code stays under 4096 chars
-  examples.test.ts         every README example synthesizes
-  python/                  pytest runs the generated Lambda handlers with fake AWS and Stripe clients
-examples/
-  per-construct.ts         the README examples
-  basic-ai-app-stack.ts    Bedrock + API Gateway + storage in one stack
-  connectiq-stack.ts       all constructs together in one sample stack
-scripts/verify-package.sh  packs the library and imports it from a clean project
-```
-
-Each construct is a plain `Construct` that composes aws-cdk-lib resources. `MultiTenantAuth` and
-`StripeBilling` are designed to work together (the billing construct takes the auth construct's
-authorizer and tenants table).
+The architecture diagram and how it works are in the [Case study](#architecture) above.
 
 ## How to run
 
